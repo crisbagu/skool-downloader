@@ -1,75 +1,101 @@
-# Skool Downloader para Mac
+<p align="center">
+  <img src="assets/skool_master.png" alt="Skool Downloader" width="160">
+</p>
 
-Abre `build/Skool Downloader.app` con doble clic.
+<h1 align="center">Skool Downloader</h1>
 
-1. Pega el enlace de una **lección** de cualquier comunidad de Skool. Incluye `/classroom/` y `?md=`.
-2. Elige la calidad máxima y la carpeta. «Mejor disponible» conserva la resolución más alta que ofrezca el proveedor.
-3. Pulsa **Descargar video**. Se abre una ventana propia de Chrome.
-4. La primera vez, inicia sesión en Skool. Si acabas en la página de inicio, pega de nuevo el enlace de la lección en ese navegador. Abre el video y pulsa **Play**.
-5. La descarga empieza automáticamente. Al terminar, pulsa **Abrir video** o **Mostrar archivo**.
+<p align="center">
+  Descarga los vídeos de tus cursos y lecciones de <b>Skool</b> a los que ya tienes acceso — en tu propio equipo, con tu sesión.
+</p>
 
-La sesión queda en `~/Library/Application Support/Skool Downloader/browser`, separada de tu Chrome habitual. Las credenciales no se envían a ningún servicio adicional. No abras dos descargas a la vez con este perfil.
+<p align="center">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-CLI-0078D6?logo=windows&logoColor=white">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-App%20%2B%20CLI-000000?logo=apple&logoColor=white">
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-CLI-FCC624?logo=linux&logoColor=black">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white">
+  <img alt="Build" src="https://github.com/crisbagu/skool-downloader/actions/workflows/release.yml/badge.svg">
+</p>
 
-## Compatibilidad y límites
+---
 
-- Detecta el HLS nativo de Skool y videos HTML, incluidos reproductores con shadow DOM. Reconoce embeds habituales de YouTube, Vimeo, Loom y Wistia mediante yt-dlp. Estos proveedores pueden exigir autenticación adicional o cambiar sus restricciones.
-- Requiere tu acceso legítimo a la lección. No elimina DRM ni desbloquea cursos.
-- La calidad elegida es un límite, no un escalado. Si el proveedor no ofrece un formato compatible dentro de ese límite, muestra un error: prueba «Mejor disponible».
-- Cancela y repite con la misma lección, carpeta y calidad para reanudar los fragmentos disponibles. No declara éxito si faltan fragmentos. Los archivos completos existentes se reutilizan.
-- Los enlaces multimedia temporales se detectan de nuevo en cada ejecución. No se guarda una lista de enlaces que vaya a caducar.
-- Esta instalación utiliza Python de Homebrew, Chrome y FFmpeg instalados en este Mac. La app referencia esta carpeta: **no muevas ni borres `skool-downloader`**. No es un instalador portátil para otro ordenador.
+## ✨ Qué hace
 
-## Comprobaciones realizadas
+- 📚 **Recorre comunidades enteras**: cursos, módulos, lecciones y publicaciones, con conteo antes de descargar.
+- 🎥 **Detecta el vídeo real**: HLS nativo de Skool (incluido shadow-DOM) y embeds de YouTube, Vimeo, Loom y Wistia vía `yt-dlp`.
+- 🔒 **Con tu sesión, en tu equipo**: abre tu navegador, inicias sesión en Skool y la cookie se queda solo en tu máquina.
+- ♻️ **Reintenta enlaces caducados**: los enlaces temporales de vídeo se vuelven a resolver solos; nada de errores crípticos de CloudFront.
+- 🧩 **Honesto con lo bloqueado**: si una lección está gated por nivel, lo intenta y te dice si Skool de verdad no la entrega, sin fingir éxito.
 
-- Descarga real de «Cuenta Personal o Empresa»: 373,54 segundos, H.264 1920×1080 y audio AAC, MP4 de 77.105.121 bytes.
-- Pruebas automáticas de validación, selección de medios, límite de calidad y flujo de detección/descarga con servidor de prueba y navegador real.
-- App compilada y abierta; validación de enlace incorrecto y selector de calidad comprobados en la interfaz.
+## ⬇️ Descargas
 
-## Desarrollo
+Los ejecutables se compilan solos en Windows, macOS y Linux con GitHub Actions y quedan en el último [**Release**](https://github.com/crisbagu/skool-downloader/releases/latest).
+
+| Sistema | Archivo | Tipo |
+|---|---|---|
+| 🪟 Windows | [`skool-downloader-windows.exe`](https://github.com/crisbagu/skool-downloader/releases/latest/download/skool-downloader-windows.exe) | Línea de comandos |
+| 🍎 macOS | [`skool-downloader-macos`](https://github.com/crisbagu/skool-downloader/releases/latest/download/skool-downloader-macos) · [`SkoolDownloader-mac.dmg`](https://github.com/crisbagu/skool-downloader/releases/latest) | CLI · App con ventana |
+| 🐧 Linux | [`skool-downloader-linux`](https://github.com/crisbagu/skool-downloader/releases/latest/download/skool-downloader-linux) | Línea de comandos |
+
+> Los binarios llevan **Chromium y ffmpeg incluidos**: descargas y ejecutas, sin instalar nada más.
+
+## 🚀 Uso rápido (CLI)
 
 ```sh
-.venv/bin/python -m unittest discover -s tests -v
-python3 build.py
-.venv/bin/python engine.py 'https://www.skool.com/comunidad/classroom/curso?md=leccion' --quality 1080
+# 1) Analizar una comunidad (genera catalog.json con todo lo accesible)
+skool-downloader "https://www.skool.com/tu-comunidad/classroom" --action scan --catalog catalog.json
+
+# 2) Descargar TODO lo accesible del análisis
+skool-downloader "https://www.skool.com/tu-comunidad/classroom" --action batch --catalog catalog.json --output ./descargas
+
+# …o una sola lección:
+skool-downloader "https://www.skool.com/tu-comunidad/classroom/curso?md=leccion" --quality 1080 --output ./descargas
 ```
 
-Dependencias en `requirements.txt`. Los errores y URLs sensibles se filtran antes de mostrarse en la app.
+Al ejecutarse se abre una ventana de navegador para que inicies sesión en Skool la primera vez.
 
-## Uso por línea de comandos (multiplataforma: Windows / Linux / Mac)
+## 🧠 Cómo funciona
 
-El motor `engine.py` funciona en Windows, Linux y macOS. Requiere Python 3.11+, Google Chrome y ffmpeg en el PATH.
+```mermaid
+flowchart LR
+    A[Pegas una URL de Skool] --> B[Abre tu navegador<br/>inicias sesión]
+    B --> C[Lee el catálogo<br/>cursos · lecciones · posts]
+    C --> D{Resuelve el vídeo real}
+    D -->|HLS nativo| E[Descarga con yt-dlp]
+    D -->|YouTube/Vimeo/Loom/Wistia| E
+    E --> F[Une audio+vídeo con ffmpeg<br/>MP4 en tu carpeta]
+```
+
+## 🍎 App de macOS con ventana
+
+Abre `build/Skool Downloader.app` (doble clic). Pega el enlace, elige calidad y carpeta, y pulsa **Descargar**.
+Para reconstruirla desde el código:
+
+```sh
+python3 build.py
+```
+
+## 🛠️ Desde el código (cualquier SO)
 
 ```sh
 python -m venv .venv
 # Windows:  .venv\Scripts\pip install -r requirements.txt
 # Mac/Linux: .venv/bin/pip install -r requirements.txt
-python -m playwright install chrome
-
-# Analizar una comunidad (genera catalog.json):
-python engine.py "https://www.skool.com/comunidad/classroom" --action scan --catalog catalog.json
-
-# Descargar una lección suelta:
-python engine.py "https://www.skool.com/comunidad/classroom/curso?md=leccion" --quality 1080 --output ./descargas
+python -m playwright install chromium
+python engine.py "https://www.skool.com/tu-comunidad/classroom" --action scan --catalog catalog.json
 ```
 
-Al ejecutarse se abre una ventana de Chrome para que inicies sesión en Skool. La sesión y las cookies quedan solo en tu equipo.
+Pruebas:
 
-### Generar el .exe de Windows
-
-Ejecuta **en un equipo Windows** (no se puede compilar Windows desde macOS):
-
-```bat
-py -m venv .venv
-.venv\Scripts\pip install -r requirements.txt pyinstaller
-.venv\Scripts\playwright install chrome
-.venv\Scripts\python build_windows.py
+```sh
+python -m unittest discover -s tests -v
 ```
 
-El resultado es `dist/skool-downloader.exe` (herramienta de línea de comandos). La app con ventana solo existe para macOS.
+## 🔐 Privacidad y límites
 
-## Privacidad y datos sensibles
+- Tu sesión y tus cookies de Skool **nunca salen de tu equipo** ni se suben al repositorio (`.gitignore` excluye `catalog.json`, el perfil `browser/`, los vídeos y los artefactos de build).
+- Los mensajes de error se **filtran** (`redact`) para no mostrar URLs firmadas ni tokens temporales.
+- Requiere tu **acceso legítimo** al contenido. No elimina DRM ni desbloquea cursos a los que tu cuenta no tenga derecho.
 
-- Las cookies y la sesión de Skool quedan **solo en tu equipo** (`~/Library/Application Support/Skool Downloader/browser` en Mac; carpeta de perfil local en Windows). Nunca se suben al repositorio ni a ningún servicio.
-- El repositorio ignora (`.gitignore`) los datos de usuario: `catalog.json`, `selection.json`, el perfil `browser/`, los vídeos descargados y los artefactos de build.
-- Los mensajes de error se filtran (`redact`) para no mostrar URLs firmadas ni tokens temporales.
-- Requiere tu acceso legítimo al contenido. No elimina DRM ni desbloquea cursos a los que tu cuenta no tenga derecho.
+## 📄 Licencia
+
+MIT — ver [`LICENSE`](LICENSE).

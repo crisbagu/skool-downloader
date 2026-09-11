@@ -65,6 +65,13 @@ def _ffmpeg_dir():
     for cand in ('/opt/homebrew/bin', '/usr/local/bin', '/usr/bin'):
         if (Path(cand) / 'ffmpeg').exists():
             return cand
+    try:
+        import imageio_ffmpeg
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and Path(exe).exists():
+            return str(Path(exe).resolve().parent)
+    except Exception:
+        pass
     return ''
 
 def redact(message):
@@ -99,6 +106,12 @@ def download_media(url, title, lesson, destination, quality='best', cookies=None
     _ff = _ffmpeg_dir()
     if _ff:
         options['ffmpeg_location'] = _ff
+    else:
+        try:
+            import imageio_ffmpeg
+            options['ffmpeg_location'] = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            pass
     with yt_dlp.YoutubeDL(options) as ydl:
         # Keep cookie domains and paths: never forward a Skool Cookie header to an embed provider.
         for c in cookies or []:
@@ -161,11 +174,15 @@ def main():
     parser.add_argument('url')
     parser.add_argument('--quality', default='best')
     parser.add_argument('--output', default=str(Path.home() / 'Downloads/Skool'))
-    parser.add_argument('--action', choices=['single','scan','batch'], default='single')
+    parser.add_argument('--action', choices=['single','scan','batch','selfcheck'], default='single')
     parser.add_argument('--scope', choices=['all','courses','posts'], default='all')
     parser.add_argument('--catalog', default=str(PROFILE.parent / 'catalog.json'))
     parser.add_argument('--selection')
     args = parser.parse_args()
+    if args.action == 'selfcheck':
+        import yt_dlp, playwright
+        print('selfcheck OK | ffmpeg=' + (_ffmpeg_dir() or 'PATH') + ' | yt_dlp=' + getattr(yt_dlp.version, '__version__', '?') + ' | playwright=' + getattr(playwright, '__version__', '?'))
+        return 0
     from catalog import parse_target, SkoolSession, scan, load_catalog, run_batch, playback_url
     target = parse_target(args.url)
     lesson = target['url']
@@ -180,7 +197,11 @@ def main():
     except BlockingIOError:
         raise RuntimeError('Ya hay un análisis o descarga en marcha. Cancélalo antes de iniciar otro.')
     with sync_playwright() as p:
-        context = p.chromium.launch_persistent_context(str(PROFILE), channel='chrome', headless=False, accept_downloads=True)
+        try:
+            context = p.chromium.launch_persistent_context(str(PROFILE), channel='chrome', headless=False, accept_downloads=True)
+        except Exception:
+            # Sin Chrome del sistema: usa el Chromium que trae Playwright (binario autónomo).
+            context = p.chromium.launch_persistent_context(str(PROFILE), headless=False, accept_downloads=True)
         try:
             page = context.pages[0] if context.pages else context.new_page()
             session = SkoolSession(context, page)
@@ -192,7 +213,7 @@ def main():
                 data = load_catalog(args.catalog)
                 if data.get('target') != target['url']:
                     raise RuntimeError('El inventario pertenece a otro enlace. Analiza el enlace actual primero.')
-                selected = json.loads(Path(args.selection).read_text()) if args.selection else []
+                selected = json.loads(Path(args.selection).read_text()) if args.selection else [i['id'] for i in data['items'] if i.get('accessible',True)]
                 if not selected:
                     raise ValueError('Selecciona al menos un video del inventario.')
                 def one(item):

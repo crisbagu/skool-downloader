@@ -1,0 +1,74 @@
+name: Build ejecutables (Windows / macOS / Linux)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: skool-downloader-windows.exe
+            bin: dist/skool-downloader.exe
+          - os: macos-latest
+            asset: skool-downloader-macos
+            bin: dist/skool-downloader
+          - os: ubuntu-latest
+            asset: skool-downloader-linux
+            bin: dist/skool-downloader
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller imageio-ffmpeg
+
+      - name: Descargar Chromium de Playwright dentro del paquete
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: '0'
+        run: python -m playwright install chromium
+
+      - name: Compilar binario (todo incluido)
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: '0'
+        run: >
+          pyinstaller --onefile --name skool-downloader
+          --collect-all playwright
+          --collect-all yt_dlp
+          --collect-all imageio_ffmpeg
+          --add-data "catalog.py${{ runner.os == 'Windows' && ';' || ':' }}."
+          engine.py
+
+      - name: Smoke test (arranque real en ${{ runner.os }})
+        run: ${{ matrix.bin }} selfcheck --action selfcheck
+
+      - name: Renombrar artefacto
+        shell: bash
+        run: mv "${{ matrix.bin }}" "${{ matrix.asset }}"
+
+      - name: Subir al Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ matrix.asset }}
+          fail_on_unmatched_files: true
+
+      - name: Guardar como artifact (si es manual)
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
