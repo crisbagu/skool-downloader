@@ -1,0 +1,38 @@
+# Entornos y dependencias
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Artefactos de build (se generan; contienen rutas absolutas de la máquina)
+build/
+dist/
+*.app/
+*.dmg
+*.zip
+*.spec
+
+# Datos de usuario y sesión (NUNCA subir: cookies, catálogos, descargas)
+catalog.json
+*.catalog.json
+selection.json
+engine.lock
+browser/
+*.mp4
+*.part
+*.ytdl
+
+# Sistema / editores
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Assets intermedios de icono
+assets/*.iconset/
+assets/_*.png
+assets/skool_base.png
+assets/icon_preview.png
