@@ -36,14 +36,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller imageio-ffmpeg
 
-      - name: Descargar Chromium de Playwright dentro del paquete
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: '0'
-        run: python -m playwright install chromium
-
-      - name: Compilar binario (todo incluido)
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: '0'
+      - name: Compilar binario (ffmpeg incluido; navegador en 1er uso)
         run: >
           pyinstaller --onefile --name skool-downloader
           --collect-all playwright

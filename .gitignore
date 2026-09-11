@@ -36,3 +36,9 @@ assets/*.iconset/
 assets/_*.png
 assets/skool_base.png
 assets/icon_preview.png
+
+# PyInstaller local
+dist_pyi/
+build_pyi/
+*.spec
+ms-playwright/

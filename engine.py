@@ -169,6 +169,42 @@ def discover(page, lesson, timeout=600):
         page.wait_for_timeout(500)
     raise RuntimeError('No se detectó un video. Abre la lección, comprueba tu acceso y pulsa Play. Si el proveedor usa DRM, no se puede descargar con esta herramienta.')
 
+def _bundled_browsers_dir():
+    """En el binario PyInstaller, Chromium viaja como data en ms-playwright/."""
+    base = getattr(sys, '_MEIPASS', None)
+    if base:
+        cand = Path(base) / 'ms-playwright'
+        if cand.exists():
+            return str(cand)
+    return ''
+
+def _launch_browser(p, profile):
+    """Chromium empaquetado > Chrome del sistema > descarga en primer uso."""
+    bundled = _bundled_browsers_dir()
+    if bundled:
+        os.environ['PLAYWRIGHT_BROWSERS_PATH'] = bundled
+    attempts = []
+    if not bundled:
+        attempts.append({'channel': 'chrome'})
+    attempts.append({})
+    last = None
+    for kw in attempts:
+        try:
+            return p.chromium.launch_persistent_context(str(profile), headless=False, accept_downloads=True, **kw)
+        except Exception as exc:
+            last = exc
+    # Último recurso: descargar Chromium una vez (equipos sin Chrome ni Chromium empaquetado).
+    try:
+        emit('status', message='Preparando el navegador (solo la primera vez)…')
+        from playwright.__main__ import main as _pw
+        _argv = sys.argv[:]; sys.argv = ['playwright', 'install', 'chromium']
+        try: _pw()
+        except SystemExit: pass
+        finally: sys.argv = _argv
+        return p.chromium.launch_persistent_context(str(profile), headless=False, accept_downloads=True)
+    except Exception:
+        raise last
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('url')
@@ -197,11 +233,7 @@ def main():
     except BlockingIOError:
         raise RuntimeError('Ya hay un análisis o descarga en marcha. Cancélalo antes de iniciar otro.')
     with sync_playwright() as p:
-        try:
-            context = p.chromium.launch_persistent_context(str(PROFILE), channel='chrome', headless=False, accept_downloads=True)
-        except Exception:
-            # Sin Chrome del sistema: usa el Chromium que trae Playwright (binario autónomo).
-            context = p.chromium.launch_persistent_context(str(PROFILE), headless=False, accept_downloads=True)
+        context = _launch_browser(p, PROFILE)
         try:
             page = context.pages[0] if context.pages else context.new_page()
             session = SkoolSession(context, page)
@@ -248,8 +280,12 @@ def main():
             context.close()
 
 if __name__ == '__main__':
-    os.setpgrp()
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
+    if hasattr(os, 'setpgrp'):
+        try: os.setpgrp()
+        except OSError: pass
+    if hasattr(signal, 'SIGTERM'):
+        try: signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
+        except (ValueError, OSError): pass
     try:
         main()
     except KeyboardInterrupt:
